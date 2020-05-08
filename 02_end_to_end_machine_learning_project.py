@@ -177,3 +177,62 @@ for set_ in (strat_train_set, strat_test_set):
 
 
 #%%
+housing = strat_train_set.copy()
+
+housing.plot(kind="scatter", x="longitude", y="latitude", alpha=0.1)
+plt.show()
+
+
+#%%
+housing.plot(kind="scatter", x="longitude", y="latitude", alpha=0.4,
+             s=housing["population"] / 100, label="population", figsize=(10, 7),
+             c="median_house_value", cmap=plt.get_cmap("jet"), colorbar=True)
+plt.legend()
+plt.show()
+
+
+#%%
+images_path = os.path.join(PROJECT_ROOT_DIR, "images", "end_to_end_project")
+os.makedirs(images_path, exist_ok=True)
+DOWNLOAD_ROOT = "https://raw.githubusercontent.com/ageron/handson-ml2/master/"
+filename = "california.png"
+print("Downloading", filename)
+url = DOWNLOAD_ROOT + "images/end_to_end_project/" + filename
+urllib.request.urlretrieve(url, os.path.join(images_path, filename))
+
+
+#%%
+import matplotlib.image as mpimg
+
+california_img = mpimg.imread(os.path.join(images_path, filename))
+ax = housing.plot(kind="scatter", x="longitude", y="latitude", alpha=0.4,
+                  s=housing["population"] / 100, label="Population", figsize=(10, 7),
+                  c="median_house_value", cmap=plt.get_cmap("jet"), colorbar=False)
+plt.imshow(california_img, extent=[-124.55, -113.80, 32.45, 42.05], alpha=0.5, cmap=plt.get_cmap("jet"))
+plt.ylabel("Latitude", fontsize=14)
+plt.xlabel("Longitude", fontsize=14)
+
+prices = housing["median_house_value"]
+tick_values = np.linspace(prices.min(), prices.max(), 11)
+cbar = plt.colorbar()
+cbar.ax.set_yticklabels(["$%dk" %(round(v/1000)) for v in tick_values], fontsize=14)
+cbar.set_label("Median House Value", fontsize=16)
+
+plt.legend(fontsize=16)
+plt.show()
+
+
+#%%
+corr_matrix = housing.corr()
+corr_matrix["median_house_value"].sort_values(ascending=False)
+
+
+#%%
+from pandas.plotting import scatter_matrix
+
+attributes = ["median_house_value", "median_income", "total_rooms", "housing_median_age"]
+scatter_matrix(housing[attributes], figsize=(12, 8))
+plt.show()
+
+
+#%%
