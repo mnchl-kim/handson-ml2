@@ -273,4 +273,40 @@ sample_incomplete_rows
 
 
 #%%
-sample_incomplete_rows
+# option 1; drop specific row
+sample_incomplete_rows.dropna(subset=["total_bedrooms"])
+
+# option 2; drop column
+sample_incomplete_rows.drop("total_bedrooms", axis=1)
+
+# option 3; fill null
+median = housing["total_bedrooms"].median()
+sample_incomplete_rows["total_bedrooms"].fillna(median, inplace=True)
+
+
+#%%
+from sklearn.impute import SimpleImputer
+
+imputer = SimpleImputer(strategy="median")
+
+
+#%%
+housing_num = housing.drop("ocean_proximity", axis=1)
+
+
+#%%
+imputer.fit(housing_num)
+
+imputer.statistics_
+housing_num.median().values
+
+
+#%%
+X = imputer.transform(housing_num)
+housing_tr = pd.DataFrame(X, columns=housing_num.columns, index=housing_num.index)
+
+
+#%%
+
+
+
