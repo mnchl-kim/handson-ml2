@@ -236,3 +236,41 @@ plt.show()
 
 
 #%%
+housing.plot(kind="scatter", x="median_income", y="median_house_value", alpha=0.1)
+plt.axis([0, 16, 0, 550000])
+plt.show()
+
+
+#%%
+housing["rooms_per_household"] = housing["total_rooms"] / housing["households"]
+housing["bedrooms_per_room"] = housing["total_bedrooms"] / housing["total_rooms"]
+housing["population_per_household"] = housing["population"] / housing["households"]
+
+
+#%%
+corr_matrix = housing.corr()
+corr_matrix["median_house_value"].sort_values(ascending=False)
+
+
+#%%
+housing.plot(kind="scatter", x="rooms_per_household", y="median_house_value", alpha=0.2)
+plt.axis([0, 5, 0, 520000])
+plt.show()
+
+
+#%%
+housing.describe()
+
+
+#%%
+housing = strat_train_set.drop("median_house_value", axis=1)
+housing_labels = strat_train_set["median_house_value"].copy()
+
+
+#%%
+sample_incomplete_rows = housing[housing.isnull().any(axis=1)].head()
+sample_incomplete_rows
+
+
+#%%
+sample_incomplete_rows
