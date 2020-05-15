@@ -611,3 +611,20 @@ zscore = stats.norm.ppf((1 + confidence) / 2)
 zmargin = zscore * squared_errors.std(ddof=1) / np.sqrt(m)
 np.sqrt(mean - zmargin), np.sqrt(mean + zmargin)
 
+
+#%%
+full_pipeline_with_predictor = Pipeline([("preparation", full_pipeline),
+                                         ("linear", LinearRegression()),
+                                         ])
+
+full_pipeline_with_predictor.fit(housing, housing_labels)
+full_pipeline_with_predictor.predict(some_data)
+
+
+#%%
+my_model = full_pipeline_with_predictor
+
+import joblib
+joblib.dump(my_model, "my_model.pkl")
+my_model_loaded = joblib.load("m_model.pkl")
+
