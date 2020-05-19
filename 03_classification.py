@@ -120,7 +120,7 @@ for train_index, test_index in skfolds.split(X_train, y_train_5):
 
     clone_clf.fit(X_train_folds, y_train_folds)
     y_pred = clone_clf.predict(X_test_fold)
-    n_correct = sum(y_pred ==  y_test_fold)
+    n_correct = sum(y_pred == y_test_fold)
     print(n_correct / len(y_pred))
 
 
@@ -204,7 +204,100 @@ plt.show()
 
 
 #%%
+def plot_precision_vs_recall(precisions, recalls):
+    plt.plot(recalls, precisions, "b-", linewidth=2)
+    plt.xlabel("Recall", fontsize=16)
+    plt.ylabel("Precision", fontsize=16)
+    plt.axis([0, 1, 0, 1])
+    plt.grid(True)
 
+
+plt.figure(figsize=(8, 6))
+plot_precision_vs_recall(precisions, recalls)
+plt.plot([0.4368, 0.4368], [0., 0.9], "r:")
+plt.plot([0., 0.4368], [0.9, 0.9], "r:")
+plt.plot([0.4368], [0.9], "ro")
+plt.show()
+
+
+#%%
+threshold_90_precision = thresholds[np.argmax(precisions >= 0.90)]
+y_train_pred_90 = (y_scores >= threshold_90_precision)
+
+precision_score(y_train_5, y_train_pred_90)
+recall_score(y_train_5, y_train_pred_90)
+
+
+#%%
+from sklearn.metrics import roc_curve
+
+fpr, tpr, thresholds = roc_curve(y_train_5, y_scores)
+
+
+def plot_roc_curve(fpr, tpr, label=None):
+    plt.plot(fpr, tpr, linewidth=2, label=label)
+    plt.plot([0, 1], [0, 1], "k--")
+    plt.axis([0, 1, 0, 1])
+    plt.xlabel("False Positive Rate (Fall-Out)", fontsize=16)
+    plt.ylabel("True Positive Rate (Recall)", fontsize=16)
+    plt.grid(True)
+
+
+plt.figure(figsize=(8, 6))
+plot_roc_curve(fpr, tpr)
+plt.plot([4.837e-3, 4.837e-3], [0., 0.4368], "r:")
+plt.plot([0.0, 4.837e-3], [0.4368, 0.4368], "r:")
+plt.plot([4.837e-3], [0.4368], "ro")
+plt.show()
+
+
+#%%
+from sklearn.metrics import roc_auc_score
+
+roc_auc_score(y_train_5, y_scores)
+
+
+#%%
+from sklearn.ensemble import RandomForestClassifier
+
+forest_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+y_probas_forest = cross_val_predict(forest_clf, X_train, y_train_5, cv=3, method="predict_proba")
+
+
+#%%
+y_scores_forest = y_probas_forest[:, 1]
+fpr_forest, tpr_forest, thresholds_forest = roc_curve(y_train_5, y_scores_forest)
+
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, "b:", linewidth=2, label="SGD")
+plot_roc_curve(fpr_forest, tpr_forest, "Random Forest")
+plt.plot([4.837e-3, 4.837e-3], [0., 0.4368], "r:")
+plt.plot([0.0, 4.837e-3], [0.4368, 0.4368], "r:")
+plt.plot([4.837e-3], [0.4368], "ro")
+plt.plot([4.837e-3, 4.837e-3], [0., 0.9487], "r:")
+plt.plot([4.837e-3], [0.9487], "ro")
+plt.grid(True)
+plt.legend(loc="lower right", fontsize=16)
+plt.show()
+
+
+#%%
+roc_auc_score(y_train_5, y_scores_forest)
+
+y_train_pred_forest = cross_val_predict(forest_clf, X_train, y_train_5, cv=3)
+precision_score(y_train_5, y_train_pred_forest)
+recall_score(y_train_5, y_train_pred_forest)
+
+
+#%%
+from sklearn.svm import SVC
+
+svm_clf = SVC()
+svm_clf.fit(X_train, y_train)
+svm_clf.predict([some_digit])
+
+
+#%%
 
 
 
