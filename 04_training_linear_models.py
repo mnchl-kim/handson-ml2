@@ -443,6 +443,87 @@ elastic_net.predict([[1.5]])
 
 
 #%%
+import numpy as np
+import matplotlib.pyplot as plt
+
+t1a, t1b, t2a, t2b = -1, 3, -1.5, 1.5
+
+t1s = np.linspace(t1a, t1b, 500)
+t2s = np.linspace(t2a, t2b, 500)
+t1, t2 = np.meshgrid(t1s, t2s)
+T = np.c_[t1.ravel(), t2.ravel()]
+Xr = np.array([[1, 1], [1, -1], [1, 0.5]])
+yr = 2 * Xr[:, :1] + 0.5 * Xr[:, 1:]
+
+J = (1 / len(Xr) * np.sum((T.dot(Xr.T) - yr.T) ** 2, axis=1)).reshape(t1.shape)
+
+N1 = np.linalg.norm(T, ord=1, axis=1).reshape(t1.shape)
+N2 = np.linalg.norm(T, ord=2, axis=1).reshape(t1.shape)
+
+t_min_idx = np.unravel_index(np.argmin(J), J.shape)
+t1_min, t2_min = t1[t_min_idx], t2[t_min_idx]
+
+t_init = np.array([[0.25], [-1]])
+
+
+#%%
+def bgd_path(theta, X, y, l1, l2, core=1, eta=0.05, n_iterations=200):
+    path = [theta]
+    for iteration in range(n_iterations):
+        gradients = core * 2 / len(X) * X.T.dot(X.dot(theta) - y) + l1 * np.sign(theta) + l2 * theta
+        theta = theta - eta * gradients
+        path.append(theta)
+    return np.array(path)
+
+
+fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(10.1, 8))
+for i, N, l1, l2, title in ((0, N1, 2., 0, "Lasso"), (1, N2, 0, 2., "Ridge")):
+    JR = J + l1 * N1 + l2 * 0.5 * N2 ** 2
+
+    tr_min_idx = np.unravel_index(np.argmin(JR), JR.shape)
+    t1r_min, t2r_min = t1[tr_min_idx], t2[tr_min_idx]
+
+    # levelsJ = (np.exp(np.linspace(0, 1, 20)) - 1) * (np.max(J) - np.min(J)) + np.min(J)
+    levelsJR = (np.exp(np.linspace(0, 1, 20)) - 1) * (np.max(JR) - np.min(JR)) + np.min(JR)
+    levelsN = np.linspace(0, np.max(N), 10)
+
+    # path_J = bgd_path(t_init, Xr, yr, l1=0, l2=0)
+    path_JR = bgd_path(t_init, Xr, yr, l1, l2)
+    path_N = bgd_path(np.array([[2.0], [0.5]]), Xr, yr, np.sign(l1) / 3, np.sign(l2), core=0)
+
+    ax = axes[i, 0]
+    ax.grid(True)
+    ax.axhline(y=0, color='k')
+    ax.axvline(x=0, color='k')
+    ax.contourf(t1, t2, N / 2., levels=levelsN)
+    ax.plot(path_N[:, 0], path_N[:, 1], "y--")
+    ax.plot(0, 0, "ys")
+    ax.plot(t1_min, t2_min, "ys")
+    ax.set_title(r"$\ell_{}$ penalty".format(i + 1), fontsize=16)
+    ax.axis([t1a, t1b, t2a, t2b])
+    if i == 1:
+        ax.set_xlabel(r"$\theta_1$", fontsize=16)
+    ax.set_ylabel(r"$\theta_2$", fontsize=16, rotation=0)
+
+    ax = axes[i, 1]
+    ax.grid(True)
+    ax.axhline(y=0, color='k')
+    ax.axvline(x=0, color='k')
+    ax.contourf(t1, t2, JR, levels=levelsJR, alpha=0.9)
+    ax.plot(path_JR[:, 0], path_JR[:, 1], "w-o")
+    ax.plot(path_N[:, 0], path_N[:, 1], "y--")
+    ax.plot(0, 0, "ys")
+    ax.plot(t1_min, t2_min, "ys")
+    ax.plot(t1r_min, t2r_min, "rs")
+    ax.set_title(title, fontsize=16)
+    ax.axis([t1a, t1b, t2a, t2b])
+    if i == 1:
+        ax.set_xlabel(r"$\theta_1$", fontsize=16)
+
+plt.show()
+
+
+#%%
 from sklearn.model_selection import train_test_split
 
 np.random.seed(42)
@@ -514,87 +595,6 @@ plt.show()
 
 
 #%%
-import matplotlib.pyplot as plt
-import numpy as np
-
-t1a, t1b, t2a, t2b = -1, 3, -1.5, 1.5
-
-t1s = np.linspace(t1a, t1b, 500)
-t2s = np.linspace(t2a, t2b, 500)
-t1, t2 = np.meshgrid(t1s, t2s)
-T = np.c_[t1.ravel(), t2.ravel()]
-Xr = np.array([[1, 1], [1, -1], [1, 0.5]])
-yr = 2 * Xr[:, :1] + 0.5 * Xr[:, 1:]
-
-J = (1 / len(Xr) * np.sum((T.dot(Xr.T) - yr.T) ** 2, axis=1)).reshape(t1.shape)
-
-N1 = np.linalg.norm(T, ord=1, axis=1).reshape(t1.shape)
-N2 = np.linalg.norm(T, ord=2, axis=1).reshape(t1.shape)
-
-t_min_idx = np.unravel_index(np.argmin(J), J.shape)
-t1_min, t2_min = t1[t_min_idx], t2[t_min_idx]
-
-t_init = np.array([[0.25], [-1]])
-
-
-#%%
-def bgd_path(theta, X, y, l1, l2, core=1, eta=0.05, n_iterations=200):
-    path = [theta]
-    for iteration in range(n_iterations):
-        gradients = core * 2 / len(X) * X.T.dot(X.dot(theta) - y) + l1 * np.sign(theta) + l2 * theta
-        theta = theta - eta * gradients
-        path.append(theta)
-    return np.array(path)
-
-
-fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(10.1, 8))
-for i, N, l1, l2, title in ((0, N1, 2., 0, "Lasso"), (1, N2, 0, 2., "Ridge")):
-    JR = J + l1 * N1 + l2 * 0.5 * N2 ** 2
-
-    tr_min_idx = np.unravel_index(np.argmin(JR), JR.shape)
-    t1r_min, t2r_min = t1[tr_min_idx], t2[tr_min_idx]
-
-    levelsJ = (np.exp(np.linspace(0, 1, 20)) - 1) * (np.max(J) - np.min(J)) + np.min(J)
-    levelsJR = (np.exp(np.linspace(0, 1, 20)) - 1) * (np.max(JR) - np.min(JR)) + np.min(JR)
-    levelsN = np.linspace(0, np.max(N), 10)
-
-    path_J = bgd_path(t_init, Xr, yr, l1=0, l2=0)
-    path_JR = bgd_path(t_init, Xr, yr, l1, l2)
-    path_N = bgd_path(np.array([[2.0], [0.5]]), Xr, yr, np.sign(l1) / 3, np.sign(l2), core=0)
-
-    ax = axes[i, 0]
-    ax.grid(True)
-    ax.axhline(y=0, color='k')
-    ax.axvline(x=0, color='k')
-    ax.contourf(t1, t2, N / 2., levels=levelsN)
-    ax.plot(path_N[:, 0], path_N[:, 1], "y--")
-    ax.plot(0, 0, "ys")
-    ax.plot(t1_min, t2_min, "ys")
-    ax.set_title(r"$\ell_{}$ penalty".format(i + 1), fontsize=16)
-    ax.axis([t1a, t1b, t2a, t2b])
-    if i == 1:
-        ax.set_xlabel(r"$\theta_1$", fontsize=16)
-    ax.set_ylabel(r"$\theta_2$", fontsize=16, rotation=0)
-
-    ax = axes[i, 1]
-    ax.grid(True)
-    ax.axhline(y=0, color='k')
-    ax.axvline(x=0, color='k')
-    ax.contourf(t1, t2, JR, levels=levelsJR, alpha=0.9)
-    ax.plot(path_JR[:, 0], path_JR[:, 1], "w-o")
-    ax.plot(path_N[:, 0], path_N[:, 1], "y--")
-    ax.plot(0, 0, "ys")
-    ax.plot(t1_min, t2_min, "ys")
-    ax.plot(t1r_min, t2r_min, "rs")
-    ax.set_title(title, fontsize=16)
-    ax.axis([t1a, t1b, t2a, t2b])
-    if i == 1:
-        ax.set_xlabel(r"$\theta_1$", fontsize=16)
-
-plt.show()
-
-
-#%%
 t = np.linspace(-10, 10, 100)
 sig = 1 / (1 + np.exp(-t))
 
@@ -611,4 +611,99 @@ plt.show()
 
 
 #%%
+from sklearn import datasets
+
+iris = datasets.load_iris()
+list(iris.keys())
+print(iris.DESCR)
+
+
+#%%
+X = iris["data"][:, 3:]
+y = (iris["target"] == 2).astype(np.int)
+
+
+#%%
+from sklearn.linear_model import LogisticRegression
+
+log_reg = LogisticRegression(solver="lbfgs", random_state=42)
+log_reg.fit(X, y)
+
+
+#%%
+X_new = np.linspace(0, 3, 1000).reshape(-1, 1)
+y_proba = log_reg.predict_proba(X_new)
+decision_boundary = X_new[y_proba[:, 1] >= 0.5][0]
+
+plt.figure(figsize=(8, 3))
+plt.plot(X[y == 0], y[y == 0], "bs")
+plt.plot(X[y == 1], y[y == 1], "g^")
+plt.plot([decision_boundary, decision_boundary], [-1, 2], "k:", linewidth=2)
+plt.plot(X_new, y_proba[:, 1], "g-", linewidth=2, label="Iris virginica")
+plt.plot(X_new, y_proba[:, 0], "b--", linewidth=2, label="Not Iris virginica")
+plt.text(decision_boundary + 0.02, 0.15, "Decision boundary", fontsize=14, color="k", ha="center")
+plt.arrow(decision_boundary, 0.08, -0.3, 0, head_width=0.05, head_length=0.1, fc="b", ec="b")
+plt.arrow(decision_boundary, 0.92, 0.3, 0, head_width=0.05, head_length=0.1, fc="g", ec="g")
+plt.xlabel("Petal width (cm)", fontsize=14)
+plt.ylabel("Probability", fontsize=14)
+plt.legend(loc="center left", fontsize=14)
+plt.axis([0, 3, -0.02, 1.02])
+plt.show()
+
+
+#%%
+decision_boundary
+log_reg.predict([[1.7], [1.5]])
+
+
+#%%
+from sklearn.linear_model import LogisticRegression
+
+X = iris["data"][:, (2, 3)]
+y = (iris["target"] == 2).astype(np.int)
+
+log_reg = LogisticRegression(solver="lbfgs", C=10**10, random_state=42)
+log_reg.fit(X, y)
+
+x0, x1 = np.meshgrid(np.linspace(2.9, 7, 500).reshape(-1, 1),
+                     np.linspace(0.8, 2.7, 200).reshape(-1, 1),
+                     )
+
+X_new = np.c_[x0.ravel(), x1.ravel()]
+
+y_proba = log_reg.predict_proba(X_new)
+
+plt.figure(figsize=(10, 4))
+plt.plot(X[y == 0, 0], X[y == 0, 1], "bs")
+plt.plot(X[y == 1, 0], X[y == 1, 1], "g^")
+
+zz = y_proba[:, 1].reshape(x0.shape)
+contour = plt.contour(x0, x1, zz, cmap=plt.cm.brg)
+
+left_right = np.array([2.9, 7])
+boundary = - (log_reg.coef_[0][0] * left_right + log_reg.intercept_[0]) / log_reg.coef_[0][1]
+
+plt.clabel(contour, inline=1, fontsize=12)
+plt.plot(left_right, boundary, "k--", linewidth=3)
+plt.text(3.5, 1.5, "Not Iris virginica", fontsize=14, color="b", ha="center")
+plt.text(6.5, 2.3, "Iris virginica", fontsize=14, color="g", ha="center")
+plt.xlabel("Petal length", fontsize=14)
+plt.ylabel("Petal width", fontsize=14)
+plt.axis([2.9, 7, 0.8, 2.7])
+plt.show()
+
+
+#%%
+
+
+
+
+
+
+
+
+
+
+
+
 
