@@ -85,6 +85,120 @@ plt.show()
 
 
 #%%
+import tensorflow as tf
+from tensorflow import keras
+
+tf.__version__
+keras.__version__
+
+
+#%%
+fashion_mnist = keras.datasets.fashion_mnist
+(X_train_full, y_train_full), (X_test, y_test) = fashion_mnist.load_data()
+
+X_train_full.shape
+X_train_full.dtype
+
+
+#%%
+X_valid, X_train = (X_train_full[:5000] / 255.0).astype("float32"), (X_train_full[5000:] / 255.0).astype("float32")
+y_valid, y_train = y_train_full[:5000], y_train_full[5000:]
+X_test = (X_test / 255.0).astype("float32")
+
+X_valid, X_train = X_train_full[:5000] / 255.0, X_train_full[5000:] / 255.0
+y_valid, y_train = y_train_full[:5000], y_train_full[5000:]
+X_test = X_test / 255.0
+
+
+X_train.shape
+X_train.dtype
+
+
+#%%
+plt.imshow(X_train[0], cmap="binary")
+plt.axis("off")
+plt.show()
+
+
+#%%
+y_train
+class_name = ["T-shirt/top", "Trouser", "Pullover", "Dress", "Coat",
+              "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"]
+
+
+#%%
+n_rows = 4
+n_cols = 10
+plt.figure(figsize=(n_cols * 1.2, n_rows * 1.2))
+for row in range(n_rows):
+    for col in range(n_cols):
+        index = n_cols * row + col
+        plt.subplot(n_rows, n_cols, index + 1)
+        plt.imshow(X_train[index], cmap="binary", interpolation="nearest")
+        plt.axis("off")
+        plt.title(class_name[y_train[index]], fontsize=12)
+plt.subplots_adjust(wspace=0.2, hspace=0.5)
+save_fig("fashion_mnist_plot", tight_layout=False)
+plt.show()
+
+
+#%%
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
+
+
+#%%
+model = keras.models.Sequential()
+model.add(keras.layers.Flatten(input_shape=[28, 28]))
+model.add(keras.layers.Dense(300, activation="relu"))
+model.add(keras.layers.Dense(100, activation="relu"))
+model.add(keras.layers.Dense(10, activation="softmax"))
+
+
+#%%
+model2 = keras.models.Sequential([
+    keras.layers.Flatten(input_shape=[28, 28]),
+    keras.layers.Dense(300, activation="relu"),
+    keras.layers.Dense(100, activation="relu"),
+    keras.layers.Dense(10, activation="softmax")
+])
+
+
+#%%
+model.layers
+model.summary()
+keras.utils.plot_model(model, "my_fashion_mnist_model.png", show_shapes=True)
+
+
+#%%
+hidden1 = model.layers[1]
+hidden1.name
+
+model.get_layer(hidden1.name) is hidden1
+
+weight, bias = hidden1.get_weights()
+
+weight
+weight.shape
+
+bias
+bias.shape
+
+
+#%%
+model.compile(loss="sparse_categorical_crossentropy",
+              optimizer="sgd",
+              metrics=["accuracy"])
+
+history = model.fit(X_train, y_train, batch_size=32, epochs=5, validation_data=(X_valid, y_valid))
+
+
+#%%
+
+
+
+
 
 
 
