@@ -330,30 +330,196 @@ y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])
 
 
 #%%
-class WideAndDeepModel(keras.models.Model):
+class WideAndDeepModel(keras.Model):
     def __init__(self, units=30, activation="relu", **kwargs):
         super().__init__(**kwargs)
         self.hidden1 = keras.layers.Dense(units, activation=activation)
         self.hidden2 = keras.layers.Dense(units, activation=activation)
+        self.main_output = keras.layers.Dense(1)
+        self.aux_output = keras.layers.Dense(1)
+
+    def call(self, inputs):
+        input_A, input_B = inputs
+        hidden1 = self.hidden1(input_B)
+        hidden2 = self.hidden2(hidden1)
+        concat = keras.layers.Concatenate()([input_A, hidden2])
+        main_output = self.main_output(concat)
+        aux_output = self.aux_output(hidden2)
+        return main_output, aux_output
 
 
+#%%
+model = WideAndDeepModel(units=30, activation="relu")
+model.compile(loss=["mse", "mse"], loss_weights=[0.9, 0.1], optimizer=keras.optimizers.SGD(lr=1e-3))
+history = model.fit([X_train_A, X_train_B], [y_train, y_train], epochs=10,
+                    validation_data=([X_valid_A, X_valid_B], [y_valid, y_valid]))
+total_loss, main_loss, aux_loss = model.evaluate([X_test_A, X_test_B], [y_test, y_test])
+y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])
 
 
+#%%
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
 
 
+#%%
+model = keras.models.Sequential([
+    keras.layers.Dense(30, activation="relu", input_shape=[8]),
+    keras.layers.Dense(30, activation="relu"),
+    keras.layers.Dense(1)
+])
 
 
+#%%
+model.compile(loss="mse", optimizer=keras.optimizers.SGD(lr=1e-3))
+history = model.fit(X_train, y_train, epochs=10, validation_data=(X_valid, y_valid))
+mse_test = model.evaluate(X_test, y_test)
 
 
+#%%
+model.save("my_keras_model.h5")
+model = keras.models.load_model("my_keras_model.h5")
+
+model.save_weights("my_keras_weights.ckpt")
+model.load_weights("my_keras_weights.ckpt")
 
 
+#%%
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
 
 
+#%%
+model = keras.models.Sequential([
+    keras.layers.Dense(30, activation="relu", input_shape=[8]),
+    keras.layers.Dense(30, activation="relu"),
+    keras.layers.Dense(1)
+])
 
 
+#%%
+model.compile(loss="mse", optimizer=keras.optimizers.SGD(lr=1e-3))
+checkpoint_cb = keras.callbacks.ModelCheckpoint("my_keras_model.h5", save_best_only=True)
+history = model.fit(X_train, y_train, epochs=10,
+                    validation_data=(X_valid, y_valid),
+                    callbacks=[checkpoint_cb])
+model = keras.models.load_model("my_keras_model.h5")
+mse_test = model.evaluate(X_test, y_test)
 
 
+#%%
+model.compile(loss="mse", optimizer=keras.optimizers.SGD(lr=1e-3))
+checkpoint_cb = keras.callbacks.ModelCheckpoint("my_keras_model.h5", save_best_only=True)
+early_stopping_cb = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True)
+history = model.fit(X_train, y_train, epochs=100,
+                    validation_data=(X_valid, y_valid),
+                    callbacks=[checkpoint_cb, early_stopping_cb])
+mse_test = model.evaluate(X_test, y_test)
 
 
+#%%
+class PrintValTrainRatioCallback(keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs):
+        print("\nval/train: {:.2f}".format(logs["val_loss"] / logs["loss"]))
 
+
+#%%
+model.compile(loss="mse", optimizer=keras.optimizers.SGD(lr=1e-3))
+val_train_ratio_cb = PrintValTrainRatioCallback()
+history = model.fit(X_train, y_train, epochs=1,
+                    validation_data=(X_valid, y_valid),
+                    callbacks=[val_train_ratio_cb])
+
+
+#%%
+import os
+import time
+
+root_logdir = os.path.join(os.curdir, "my_logs")
+
+def get_run_logdir():
+    run_id = time.strftime("run_%Y_%m_%d-%H_%M_%S")
+    return os.path.join(root_logdir, run_id)
+
+run_logdir = get_run_logdir()
+
+
+#%%
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
+
+
+#%%
+model = keras.models.Sequential([
+    keras.layers.Dense(30, activation="relu", input_shape=[8]),
+    keras.layers.Dense(30, activation="relu"),
+    keras.layers.Dense(1)
+])
+
+
+#%%
+model.compile(loss="mse", optimizer=keras.optimizers.SGD(lr=1e-3))
+checkpoint_cb = keras.callbacks.ModelCheckpoint("my_keras_model.h5", save_best_only=True)
+tensorboard_cb = keras.callbacks.TensorBoard(run_logdir)
+history = model.fit(X_train, y_train, epochs=30,
+                    validation_data=(X_valid, y_valid),
+                    callbacks=[checkpoint_cb, tensorboard_cb])
+
+
+#%%
+keras.backend.clear_session()
+np.random.seed(42)
+tf.random.set_seed(42)
+
+
+#%%
+def build_model(n_hidden=1, n_neurons=30, learning_rate=3e-3, input_shape=[8]):
+    model = keras.models.Sequential()
+    model.add(keras.layers.InputLayer(input_shape=input_shape))
+    for layer in range(n_hidden):
+        model.add(keras.layers.Dense(n_neurons, activation="relu"))
+    model.add(keras.layers.Dense(1))
+    optimizer = keras.optimizers.SGD(lr=learning_rate)
+    model.compile(loss="mse", optimizer=optimizer)
+    return model
+
+
+#%%
+keras_reg = keras.wrappers.scikit_learn.KerasRegressor(build_model)
+keras_reg.fit(X_train, y_train, epochs=100,
+              validation_data=(X_valid, y_valid),
+              callbacks=[keras.callbacks.EarlyStopping(patience=10)])
+mse_test = keras_reg.score(X_test, y_test)
+y_pred = keras_reg.predict(X_new)
+
+
+#%%
+from scipy.stats import reciprocal
+from sklearn.model_selection import RandomizedSearchCV
+
+param_distribs = {
+    "n_hidden": [0, 1, 2, 3],
+    "n_neurons": np.arange(1, 100),
+    "learning_rate": reciprocal(3e-4, 3e-2)
+}
+
+rnd_search_cv = RandomizedSearchCV(keras_reg, param_distribs, n_iter=10, cv=3)
+rnd_search_cv.fit(X_train, y_train, epochs=100,
+                  validation_data=(X_valid, y_valid),
+                  callbacks=[keras.callbacks.EarlyStopping(patience=10)])
+
+
+#%%
+rnd_search_cv.best_params_
+rnd_search_cv.best_score_
+rnd_search_cv.best_estimator_
+rnd_search_cv.score(X_test, y_test)
+
+
+#%%
+model = rnd_search_cv.best_estimator_.model
+model.evaluate(X_test, y_test)
 
